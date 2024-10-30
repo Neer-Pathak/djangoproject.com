@@ -233,7 +233,9 @@ class WebhookHandler:
     def subscription_cancelled(self):
         subscription = self.event.data.object
         cancelled_subscription_id = "cancel" + subscription.id
-        donation = get_object_or_404(Donation, stripe_subscription_id=cancelled_subscription_id)
+        donation = get_object_or_404(
+            Donation, stripe_subscription_id=cancelled_subscription_id
+        )
         donation.stripe_subscription_id = ""
         donation.save()
 
