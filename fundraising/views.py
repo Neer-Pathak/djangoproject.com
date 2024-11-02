@@ -175,7 +175,7 @@ def cancel_donation(request, hero):
     customer = stripe.Customer.retrieve(donation.stripe_customer_id)
     customer.subscriptions.retrieve(donation.stripe_subscription_id).delete()
 
-    donation.stripe_subscription_id = ""
+    donation.stripe_subscription_id = "cancel" + donation.stripe_subscription_id
     donation.save()
 
     messages.success(request, "Your donation has been canceled.")
@@ -232,7 +232,10 @@ class WebhookHandler:
 
     def subscription_cancelled(self):
         subscription = self.event.data.object
-        donation = get_object_or_404(Donation, stripe_subscription_id=subscription.id)
+        cancelled_subscription_id = "cancel" + subscription.id
+        donation = get_object_or_404(
+            Donation, stripe_subscription_id=cancelled_subscription_id
+        )
         donation.stripe_subscription_id = ""
         donation.save()
 
