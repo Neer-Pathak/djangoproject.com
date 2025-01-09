@@ -1,6 +1,8 @@
+from contextlib import redirect_stderr
 from datetime import timedelta
-from test.support import captured_stderr
+from io import StringIO
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -64,7 +66,7 @@ class EntryTestCase(DateTimeMixin, TestCase):
         """
         Make sure docutils' file inclusion directives are disabled by default.
         """
-        with captured_stderr() as self.docutils_stderr:
+        with redirect_stderr(StringIO()):
             entry = Entry.objects.create(
                 pub_date=self.now,
                 is_active=True,
@@ -189,6 +191,38 @@ class ViewsTestCase(DateTimeMixin, TestCase):
         response = self.client.get(reverse("weblog:index"))
         self.assertEqual(response.status_code, 200)
         self.assertQuerySetEqual(response.context["events"], [])
+
+    def test_no_unpublished_future_events(self):
+        """
+        Make sure there are no unpublished future events in the "upcoming events" sidebar
+        """
+        # We need a published entry on the index page so that it doesn't return a 404
+        Entry.objects.create(pub_date=self.yesterday, is_active=True, slug="a")
+        Event.objects.create(
+            date=self.tomorrow,
+            pub_date=self.yesterday,
+            is_active=False,
+            headline="inactive",
+        )
+        Event.objects.create(
+            date=self.tomorrow,
+            pub_date=self.tomorrow,
+            is_active=True,
+            headline="future publish date",
+        )
+
+        for user in [
+            None,
+            User.objects.create(username="non-staff", is_staff=False),
+            User.objects.create(username="staff", is_staff=True),
+            User.objects.create_superuser(username="superuser"),
+        ]:
+            if user:
+                self.client.force_login(user)
+            response = self.client.get(reverse("weblog:index"))
+            with self.subTest(user=user):
+                self.assertEqual(response.status_code, 200)
+                self.assertQuerySetEqual(response.context["events"], [])
 
 
 class SitemapTests(DateTimeMixin, TestCase):

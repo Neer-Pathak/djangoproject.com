@@ -222,7 +222,6 @@ TIME_ZONE = "America/Chicago"
 
 USE_I18N = True
 
-USE_L10N = False
 
 USE_TZ = False
 
@@ -274,6 +273,7 @@ STRIPE_SECRET_KEY = SECRETS.get("stripe_secret_key", "sk_test_x6zP4wd7Z5jcvDOJbb
 STRIPE_PUBLISHABLE_KEY = SECRETS.get(
     "stripe_publishable_key", "pk_test_TyB5jcROwK8mlCNrn3dCwW7l"
 )
+STRIPE_ENDPOINT_SECRET = SECRETS.get("stripe_endpoint_secret", "insecure")
 
 # product IDs
 PRODUCTS = {
@@ -306,3 +306,5 @@ THUMBNAIL_ALTERNATIVE_RESOLUTIONS = [2]
 TRAC_URL = "https://code.djangoproject.com/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+FORMS_URLFIELD_ASSUME_HTTPS = True

@@ -1,5 +1,4 @@
 import decimal
-import json
 import logging
 
 import stripe
@@ -11,6 +10,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -112,8 +112,10 @@ def thank_you(request):
 def manage_donations(request, hero):
     hero = get_object_or_404(DjangoHero, pk=hero)
     recurring_donations = hero.donation_set.exclude(stripe_subscription_id="")
-    past_payments = Payment.objects.filter(donation__donor=hero).select_related(
-        "donation"
+    past_payments = (
+        Payment.objects.filter(donation__donor=hero)
+        .select_related("donation")
+        .order_by("-date")
     )
 
     ModifyDonationsFormset = modelformset_factory(Donation, form=DonationForm, extra=0)
@@ -131,7 +133,7 @@ def manage_donations(request, hero):
         if hero_form.is_valid() and modify_donations_formset.is_valid():
             hero_form.save()
             modify_donations_formset.save()
-            messages.success(request, "Your information has been updated.")
+            messages.success(request, _("Your information has been updated."))
     else:
         hero_form = DjangoHeroForm(instance=hero)
         modify_donations_formset = ModifyDonationsFormset(queryset=recurring_donations)
@@ -178,7 +180,7 @@ def cancel_donation(request, hero):
     donation.stripe_subscription_id = "cancel" + donation.stripe_subscription_id
     donation.save()
 
-    messages.success(request, "Your donation has been canceled.")
+    messages.success(request, _("Your donation has been canceled."))
     return redirect("fundraising:manage-donations", hero=hero.pk)
 
 
@@ -186,16 +188,13 @@ def cancel_donation(request, hero):
 @csrf_exempt
 def receive_webhook(request):
     try:
-        data = json.loads(request.body.decode())
-    except ValueError:
-        return HttpResponse(422)
-
-    # For security, re-request the event object from Stripe.
-    # TODO: Verify shared secret here?
-    try:
-        event = stripe.Event.retrieve(data["id"])
-    except stripe.error.InvalidRequestError:
-        return HttpResponse(422)
+        event = stripe.Webhook.construct_event(
+            request.body,
+            request.headers["stripe-signature"],
+            settings.STRIPE_ENDPOINT_SECRET,
+        )
+    except (KeyError, ValueError, stripe.error.SignatureVerificationError):
+        return HttpResponse(status=422)
 
     return WebhookHandler(event).handle()
 
@@ -211,7 +210,7 @@ class WebhookHandler:
             "customer.subscription.deleted": self.subscription_cancelled,
             "checkout.session.completed": self.checkout_session_completed,
         }
-        handler = handlers.get(self.event.type, lambda: HttpResponse(422))
+        handler = handlers.get(self.event.type, lambda: HttpResponse(status=422))
         if not self.event.data.object:
             return HttpResponse(status=422)
         return handler()
@@ -243,7 +242,7 @@ class WebhookHandler:
             "fundraising/email/subscription_cancelled.txt", {"donation": donation}
         )
         send_mail(
-            "Payment cancelled",
+            _("Payment cancelled"),
             mail_text,
             settings.DEFAULT_FROM_EMAIL,
             [donation.donor.email],
@@ -261,7 +260,7 @@ class WebhookHandler:
             "fundraising/email/payment_failed.txt", {"donation": donation}
         )
         send_mail(
-            "Payment failed",
+            _("Payment failed"),
             mail_text,
             settings.DEFAULT_FROM_EMAIL,
             [donation.donor.email],
@@ -300,7 +299,7 @@ class WebhookHandler:
         customer = stripe.Customer.retrieve(
             session.customer, stripe_version="2020-08-27"
         )
-        hero, _ = DjangoHero.objects.get_or_create(
+        hero, _created = DjangoHero.objects.get_or_create(
             stripe_customer_id=customer.id,
             defaults={
                 "email": customer.email,
@@ -331,7 +330,7 @@ class WebhookHandler:
             "fundraising/email/thank-you.html", {"donation": donation}
         )
         send_mail(
-            "Thank you for your donation to the Django Software Foundation",
+            _("Thank you for your donation to the Django Software Foundation"),
             message,
             settings.FUNDRAISING_DEFAULT_FROM_EMAIL,
             [donation.receipt_email],

@@ -39,23 +39,17 @@
 
     <title>{% block title %}The web framework for perfectionists with deadlines{% endblock %} | Django</title>
 
+    <link href="{% static "fonts/FiraMono-Regular.woff" %}" as="font" type="font/woff" crossorigin="anonymous" />
+    <link href="{% static "fonts/FiraMono-Bold.woff" %}" as="font" type="font/woff" crossorigin="anonymous" />
+
+    <link href="{% static "fonts/fontawesome-webfont.woff" %}" as="font" type="font/woff" crossorigin="anonymous" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{% static "css/output.css" %}" >
-    <script src="{% static "js/lib/webfontloader/webfontloader.js" %}"></script>
-    <script>
-      WebFont.load({
-        custom: {
-          families: ['FontAwesome', 'Fira+Mono'],
-        },
-        google: {
-          families: ['Roboto:400italic,700italic,300,700,400:latin'
-          ]
-        },
-        classes: false,
-        events: false,
-        timeout: 1000
-      });
-    </script>
-    <script src="{% static "js/lib/modernizr.js" %}"></script>
+
     <script src="{% static "js/mod/switch-dark-mode.js" %}"></script>
     {% block head_extra %}{% endblock head_extra %}
   </head>
@@ -84,7 +78,17 @@
     elements.
     {% endcomment %}
 
-    <div id="billboard">{% block billboard %}{% endblock %}</div>
+    <div id="billboard">
+      {% block billboard %}
+        <div class="banner">
+          <p>
+            Please take a few minutes to complete the
+            <a href="https://jb.gg/asjljo">2024 Django Developers Survey</a>.<br>
+            Your feedback will help guide future efforts.
+          </p>
+        </div>
+      {% endblock %}
+    </div>
 
     <div class="container {% block layout_class %}{% endblock %}">
       <div role="main">
@@ -138,26 +142,18 @@
       var require = {
         shim: {
           'jquery': [],
-          'jquery.inview': ["jquery"],
-          'jquery.payment': ["jquery"],
           'jquery.flot': ["jquery"],
-          'jquery.unveil': ["jquery"],
           'stripe': {
             exports: 'Stripe'
           }
         },
         paths: {
-          "jquery": extless("{% static 'js/lib/jquery/dist/jquery.min.js' %}"),
-          "jquery.inview": extless("{% static 'js/lib/jquery.inview/jquery.inview.min.js' %}"),
-          "jquery.payment": extless("{% static 'js/lib/jquery.payment/lib/jquery.payment.js' %}"),
-          "jquery.unveil": extless("{% static 'js/lib/unveil/jquery.unveil.min.js' %}"),
-          "jquery.flot": extless("{% static 'js/lib/jquery-flot/jquery.flot.min.js' %}"),
-          "clipboard": extless("{% static 'js/lib/clipboard/dist/clipboard.min.js' %}"),
+          "jquery": extless("{% static 'js/lib/jquery.min.js' %}"),
+          "jquery.flot": extless("{% static 'js/lib/jquery.flot.min.js' %}"),
           "mod/floating-warning": extless("{% static 'js/mod/floating-warning.js' %}"),
           "mod/list-collapsing": extless("{% static 'js/mod/list-collapsing.js' %}"),
           "mod/list-feature": extless("{% static 'js/mod/list-feature.js' %}"),
           "mod/mobile-menu": extless("{% static 'js/mod/mobile-menu.js' %}"),
-          "mod/version-switcher": extless("{% static 'js/mod/version-switcher.js' %}"),
           "mod/search-key": extless("{% static 'js/mod/search-key.js' %}"),
           "mod/stripe-change-card": extless("{% static 'js/mod/stripe-change-card.js' %}"),
           "mod/switch-dark-mode": extless("{% static 'js/mod/switch-dark-mode.js' %}"),
@@ -168,6 +164,7 @@
       };
     </script>
     <script data-main="{% static "js/main.js" %}" src="{% static "js/lib/require.js" %}"></script>
+    <script src="{% static "js/djangoproject.js" %}"></script>
     {% block body_extra %}{% endblock body_extra %}
   </body>
 </html>

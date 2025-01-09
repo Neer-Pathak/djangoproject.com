@@ -43,41 +43,14 @@ exhaustive):
 
 """
 
-import datetime
+from datetime import date
 from functools import reduce
 from operator import and_, or_
 from urllib.parse import parse_qs
 
 from django.db import models
 
-try:
-    _epoc = datetime.datetime(1970, 1, 1, tzinfo=datetime.UTC)
-except AttributeError:
-    # TODO: Remove when dropping support for Python 3.8
-    _epoc = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
-
-
-class time_property:
-    """
-    Convert Trac timestamps into UTC datetimes.
-
-    See http://trac.edgewall.org/browser//branches/0.12-stable/trac/util/datefmt.py
-    for Trac's version of all this. Mine's something of a simplification.
-
-    Like the rest of this module this is far from perfect -- no setters, for
-    example! That's good enough for now.
-    """
-
-    def __init__(self, fieldname):
-        self.fieldname = fieldname
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        timestamp = getattr(instance, self.fieldname)
-        if timestamp is None:
-            return None
-        return _epoc + datetime.timedelta(microseconds=timestamp)
+from .tractime import dayrange, time_property
 
 
 class JSONBObjectAgg(models.Aggregate):
@@ -101,7 +74,17 @@ class TicketQuerySet(models.QuerySet):
         filter_kwargs, exclude_kwargs = {}, {}
 
         for field, (value,) in parsed.items():
-            if field not in model_fields:
+            if field == "time":
+                if value == "today..":
+                    timestamp_range = dayrange(date.today(), 1)
+                elif value == "thisweek..":
+                    timestamp_range = dayrange(date.today(), 7)
+                else:
+                    raise ValueError(f"Unsupported time value {value}")
+
+                filter_kwargs["_time__range"] = timestamp_range
+                continue
+            elif field not in model_fields:
                 custom_lookup_required = True
                 field = f"custom__{field}"
             if value.startswith("!"):
@@ -254,10 +237,10 @@ class Milestone(models.Model):
     description = models.TextField()
 
     _due = models.BigIntegerField(db_column="_due")
-    due = time_property("due")
+    due = time_property("_due")
 
     _completed = models.BigIntegerField(db_column="_completed")
-    completed = time_property("completed")
+    completed = time_property("_completed")
 
     class Meta:
         db_table = "milestone"
@@ -293,7 +276,7 @@ class Revision(models.Model):
     rev = models.TextField(primary_key=True)
 
     _time = models.BigIntegerField(db_column="time")
-    time = time_property("time")
+    time = time_property("_time")
 
     author = models.TextField()
     message = models.TextField()
@@ -314,7 +297,7 @@ class Wiki(models.Model):
     )  # XXX See note at the top about composite pk
     version = models.IntegerField()
     _time = models.BigIntegerField(db_column="time")
-    time = time_property("time")
+    time = time_property("_time")
     author = models.TextField()
     text = models.TextField()
     comment = models.TextField()
@@ -336,7 +319,7 @@ class Attachment(models.Model):
     filename = models.TextField()
     size = models.IntegerField()
     _time = models.BigIntegerField(db_column="time")
-    time = time_property("time")
+    time = time_property("_time")
     description = models.TextField()
     author = models.TextField()
 

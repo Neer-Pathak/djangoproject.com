@@ -5,9 +5,12 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
 from django.views.generic.dates import timezone_today
 from django_hosts import reverse
-from sorl.thumbnail import ImageField, get_thumbnail
+from sorl.thumbnail import ImageField
+
+from djangoproject.thumbnails import LogoThumbnailMixin
 
 BRONZE_MEMBERSHIP = 1
 SILVER_MEMBERSHIP = 2
@@ -24,11 +27,11 @@ CORPORATE_MEMBERSHIP_AMOUNTS = {
 }
 
 MEMBERSHIP_LEVELS = (
-    (BRONZE_MEMBERSHIP, "Bronze"),
-    (SILVER_MEMBERSHIP, "Silver"),
-    (GOLD_MEMBERSHIP, "Gold"),
-    (PLATINUM_MEMBERSHIP, "Platinum"),
-    (DIAMOND_MEMBERSHIP, "Diamond"),
+    (BRONZE_MEMBERSHIP, _("Bronze")),
+    (SILVER_MEMBERSHIP, _("Silver")),
+    (GOLD_MEMBERSHIP, _("Gold")),
+    (PLATINUM_MEMBERSHIP, _("Platinum")),
+    (DIAMOND_MEMBERSHIP, _("Diamond")),
 )
 
 MEMBERSHIP_TO_KEY = {k: v.lower() for k, v in MEMBERSHIP_LEVELS}
@@ -42,8 +45,10 @@ class IndividualMember(models.Model):
     reason_for_leaving = models.TextField(
         blank=True,
         help_text=mark_safe(
-            "⚠️ This reason is publicly displayed on the website. "
-            "<strong>Do not include confidential details.</strong>"
+            _(
+                "⚠️ This reason is publicly displayed on the website. "
+                "<strong>Do not include confidential details.</strong>"
+            )
         ),
     )
 
@@ -61,7 +66,7 @@ class IndividualMember(models.Model):
 class Team(models.Model):
     name = models.CharField(max_length=250)
     slug = models.SlugField()
-    description = models.TextField(help_text="HTML, without surrounding <p> tags.")
+    description = models.TextField(help_text=_("HTML, without surrounding <p> tags."))
     members = models.ManyToManyField(IndividualMember)
 
     def __str__(self):
@@ -88,12 +93,12 @@ class CorporateMemberManager(models.Manager):
         return members_by_type
 
 
-class CorporateMember(models.Model):
+class CorporateMember(LogoThumbnailMixin, models.Model):
     display_name = models.CharField(max_length=250)
     billing_name = models.CharField(
         max_length=250,
         blank=True,
-        help_text="If different from display name.",
+        help_text=_("If different from display name."),
     )
     logo = ImageField(upload_to="corporate-members", null=True, blank=True)
     description = models.TextField(blank=True)
@@ -102,13 +107,13 @@ class CorporateMember(models.Model):
     contact_email = models.EmailField()
     billing_email = models.EmailField(
         blank=True,
-        help_text="If different from contact email.",
+        help_text=_("If different from contact email."),
     )
     membership_level = models.IntegerField(choices=MEMBERSHIP_LEVELS)
     address = models.TextField(blank=True)
-    django_usage = models.TextField(blank=True, help_text="Not displayed publicly.")
-    notes = models.TextField(blank=True, help_text="Not displayed publicly.")
-    inactive = models.BooleanField(default=False, help_text="No longer renewing.")
+    django_usage = models.TextField(blank=True, help_text=_("Not displayed publicly."))
+    notes = models.TextField(blank=True, help_text=_("Not displayed publicly."))
+    inactive = models.BooleanField(default=False, help_text=_("No longer renewing."))
 
     objects = CorporateMemberManager()
 
@@ -145,10 +150,6 @@ class CorporateMember(models.Model):
                 expiry_date = invoice.expiration_date
         return expiry_date
 
-    @property
-    def thumbnail(self):
-        return get_thumbnail(self.logo, "170x170", quality=100) if self.logo else None
-
     def get_renewal_link(self):
         return reverse(
             "members:corporate-members-renew", kwargs={"token": signing.dumps(self.pk)}
@@ -162,7 +163,7 @@ def create_thumbnail_on_save(sender, **kwargs):
 
 class Invoice(models.Model):
     sent_date = models.DateField(blank=True, null=True)
-    amount = models.IntegerField(help_text="In integer dollars")
+    amount = models.IntegerField(help_text=_("In integer dollars"))
     paid_date = models.DateField(blank=True, null=True)
     expiration_date = models.DateField(blank=True, null=True)
     member = models.ForeignKey(CorporateMember, on_delete=models.CASCADE)

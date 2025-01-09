@@ -1,13 +1,14 @@
 import datetime
 
 from django.contrib.redirects.models import Redirect
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.safestring import SafeString
 
 from members.models import MEMBERSHIP_LEVELS, PLATINUM_MEMBERSHIP, CorporateMember
 
 from .models import Release, create_releases_up_to_1_5
+from .templatetags.date_format import isodate
 from .templatetags.release_notes import get_latest_micro_release, release_notes
 
 
@@ -64,6 +65,17 @@ class TestTemplateTags(TestCase):
             '<a href="http://docs.djangoproject.localhost:8000/en/1.10/releases/1.10/">'
             "1.10 release notes</a>",
         )
+
+    def test_isodate(self):
+        self.assertEqual(isodate("2005-07-21"), "July 21, 2005")
+
+    def test_isodate_explicit_format(self):
+        self.assertEqual(isodate("2005-07-21", "Ymd"), "20050721")
+        self.assertEqual(isodate("2005-07-21", "d/m/Y"), "21/07/2005")
+
+    @override_settings(LANGUAGE_CODE="nn")
+    def test_isodate_translated(self):
+        self.assertEqual(isodate("2005-07-21"), "21. juli 2005")
 
 
 class TestReleaseManager(TestCase):
@@ -162,7 +174,7 @@ class CorporateMembersTestCase(TestCase):
             display_name=f"{level_name} Member",
             url=f"https://{level_name.lower()}.example.com",
             membership_level=level,
-            notes=f"Some notes about this {level_name} member",
+            description=f"Some notes about this {level_name} member",
         )
         # ensure each member is included in `for_public_display`
         member.invoice_set.create(
@@ -183,13 +195,13 @@ class CorporateMembersTestCase(TestCase):
 
         self.assertContains(response, "<h2>Diamond and Platinum Members</h2>")
         member_link = (
-            lambda m: f'<a href="{m.url}" title="{m.display_name}">{m.notes}</a>'
+            lambda m: f'<a href="{m.url}" title="{m.display_name}">{m.description}</a>'
         )
         for member in members:
             if member.membership_level < PLATINUM_MEMBERSHIP:
                 self.assertNotContains(response, member.display_name)
                 self.assertNotContains(response, member.url)
-                self.assertNotContains(response, member.notes)
+                self.assertNotContains(response, member.description)
             else:
                 self.assertContains(response, member_link(member), html=True)
 
@@ -206,4 +218,4 @@ class CorporateMembersTestCase(TestCase):
         for member in members:
             self.assertNotContains(response, member.display_name)
             self.assertNotContains(response, member.url)
-            self.assertNotContains(response, member.notes)
+            self.assertNotContains(response, member.description)

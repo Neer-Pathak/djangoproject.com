@@ -1,4 +1,4 @@
-exclude: '(^djangoproject\/static\/.*$)'
+exclude: '^djangoproject\/static\/(css\/|fonts\/|img\/|robots).*$'
 default_language_version:
     python: python3
 repos:
@@ -19,6 +19,7 @@ repos:
           - id: debug-statements
           - id: detect-private-key
           - id: end-of-file-fixer
+            exclude: '(^djangoproject\/static\/js\/lib\/.*$)'
             exclude_types: [json, sql]
           - id: file-contents-sorter
             files: ^(requirements/\w*.txt)$
@@ -27,27 +28,26 @@ repos:
           - id: mixed-line-ending
           - id: trailing-whitespace
     - repo: https://github.com/asottile/pyupgrade
-      rev: "v3.19.0"
+      rev: "v3.19.1"
       hooks:
           - id: pyupgrade
-            # TODO: Update to --py312 when dropping support for
-            # Python 3.8
-            args: [--py38-plus]
+            args: [--py312]
     - repo: https://github.com/adamchainz/django-upgrade
-      rev: "1.22.1"
+      rev: "1.22.2"
       hooks:
           - id: django-upgrade
-            args: [--target-version, "4.2"]
+            args: [--target-version, "5.0"]
     - repo: https://github.com/psf/black
       rev: 24.10.0
       hooks:
           - id: black
             exclude: '(\/migrations\/)'
     - repo: https://github.com/rbubley/mirrors-prettier
-      rev: "v3.3.3"
+      rev: "v3.4.2"
       hooks:
           - id: prettier
             exclude_types: [html, json, scss]
+            exclude: '(^djangoproject\/static\/js\/lib\/.*$)'
     - repo: https://github.com/pycqa/isort
       rev: "5.13.2"
       hooks:
@@ -62,7 +62,7 @@ repos:
           - id: djhtml
             files: .*/templates/.*\.html$
     - repo: https://github.com/tox-dev/pyproject-fmt
-      rev: "2.4.3"
+      rev: "v2.5.0"
       hooks:
           - id: pyproject-fmt
     - repo: https://github.com/mrtazz/checkmake.git
