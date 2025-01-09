@@ -281,8 +281,7 @@ class TestWebhooks(TestCase):
         self.assertEqual(self.donation.payment_set.count(), 1)
         payment = self.donation.payment_set.first()
         self.assertEqual(payment.amount, 10)
-        
-            
+
     @patch("stripe.Event.retrieve")
     def test_subscription_cancelled(self, event):
         event.return_value = self.stripe_data("subscription_cancelled")
@@ -295,7 +294,6 @@ class TestWebhooks(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         expected_url = django_hosts_reverse("fundraising:index")
         self.assertTrue(expected_url in mail.outbox[0].body)
-
 
     def test_payment_failed(self):
         self.post_event(self.stripe_data("payment_failed"))
